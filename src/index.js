@@ -3,6 +3,7 @@ import { DB_NAME } from "./constants.js";
 import express from "express";
 import connectDB from "./db/db.js";
 import dotenv from "dotenv";
+import { app } from "./app.js";
 
 dotenv.config(
     {
@@ -29,7 +30,7 @@ connectDB()
 
 
 
-const app=express()
+// const app=express()
 
 
 
