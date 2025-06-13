@@ -27,7 +27,7 @@ const userSchema = new Schema
             index:true,
         },
         avatar:{
-            type:true,//from cloudinary
+            type:String,//from cloudinary
             required:true,
         },
         coverimage:{
@@ -98,4 +98,4 @@ userSchema.methods.generateRefreshToken=function()
     )
 }
 
-export const User = mongoose.Model("User",userSchema);
+export const User = mongoose.model("User",userSchema);

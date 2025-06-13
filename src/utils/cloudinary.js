@@ -30,3 +30,5 @@ const uploadOnCloudianry = async (localFilePath)=>{
         return null;
     }
 }
+
+export {uploadOnCloudianry};
