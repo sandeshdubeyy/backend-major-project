@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({
@@ -9,26 +8,19 @@ cloudinary.config({
 });
 
 const uploadOnCloudianry = async (localFilePath) => {
+  if (!localFilePath) return null;
   try {
-    if (!localFilePath) return null;
-
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
     });
     // file uplaod ho chuki h cloudinary pe
     console.log("yeh dlt hone wala h ", localFilePath);
-    const absolutePath = path.resolve(localFilePath);
-    if (fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath);
-    }
+    fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
     //remove local pe save ki gayi temporary file
     console.log("yeh dlt hone wala h ", localFilePath);
-    const absolutePath = path.resolve(localFilePath);
-    if (fs.existsSync(absolutePath)) {
-      fs.unlinkSync(absolutePath);
-    }
+    fs.unlinkSync(localFilePath);
     return null;
   }
 };
