@@ -9,7 +9,6 @@ const registerUser=asyncHandler( async(req,res) =>
     //get user details (username,password,email,fullname)
     
     const {fullname,email,username,password}=req.body;
-    console.log("email: ",email);
     
     //validation of all the fields if they filled correctly or not
 
@@ -21,10 +20,10 @@ const registerUser=asyncHandler( async(req,res) =>
 
     //check if user already exists
 
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or:[{ username },{ email }]
     })
-
+    
     if(existedUser)
     {
         throw new ApiError(409,"User with similar email or username already exists");
@@ -33,9 +32,13 @@ const registerUser=asyncHandler( async(req,res) =>
     //check for images and validate
     
     const avatarLocalPath=req.files?.avatar[0]?.path;
-    const coverImageLocalPath=req.files?.coverImage[0]?.path;
+    //const coverImageLocalPath=req.files?.coverImage[0]?.path;
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0)
+    {
+        coverImageLocalPath=req.files.coverImage[0].path;
+    }
 
-    console.log(avatarLocalPath);
 
     if(!avatarLocalPath)
     {
@@ -48,7 +51,6 @@ const registerUser=asyncHandler( async(req,res) =>
     const coverImage = await uploadOnCloudianry(coverImageLocalPath);
 
     //confirm if avatar it is uploaded or not as it is required field
-
     if(!avatar)
     {
         throw new ApiError(400,"Avatar field is required");
