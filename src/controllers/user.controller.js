@@ -3,6 +3,26 @@ import {ApiError} from "../utils/ApiError.js";
 import {User} from "../models/user.models.js";
 import {uploadOnCloudianry} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { application } from "express";
+
+
+// creating seperate method for generating access and refresh token
+
+const generateAccessAndRefreshToken = async(userId)=>{
+    try {
+        const user = await User.findById(userId);
+        const accessToken = user.generateAcessToken();
+        const refreshToken = user.generateRefreshToken();
+
+        user.refreshTokens=refreshToken;
+        await user.save( {validateBeforeSave:false} ); // does not need to check all fields because password was already valiadated while logging in
+
+        return{accessToken,refreshToken};
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while generating access and refresh token");
+    }
+}
+
 
 const registerUser=asyncHandler( async(req,res) =>
 {
@@ -21,7 +41,7 @@ const registerUser=asyncHandler( async(req,res) =>
     //check if user already exists
 
     const existedUser = await User.findOne({
-        $or:[{ username },{ email }]
+        $or:[{ username },{ email }] //mongo db operatos
     })
     
     if(existedUser)
@@ -90,4 +110,68 @@ const registerUser=asyncHandler( async(req,res) =>
     );
 });
 
-export {registerUser};
+
+const loginUser = asyncHandler(async(req,res)=>{
+
+    // get info from req body
+    const {email,username,password}=req.body;
+    // validate the username or email
+    if(!username || !email)
+    {
+        throw new ApiError(400,"username or email is required");
+    }
+    // check if user exists
+    const user = await User.findOne({
+        $or:[{email},{username}] //mongo db operators
+    })
+ 
+    if(!user)
+    {
+        throw new ApiError(404,"User does not exist");
+    }
+    // check password
+
+    const isPasswordValid = user.isPasswordCorrect(password);
+
+    if(!isPasswordValid)
+    {
+        throw new ApiError(401,"Password is incorrect");
+    }
+    
+    // give access and ref token
+    
+    const {accessToken,refreshToken} =  await generateAccessAndRefreshToken(user._id);  
+    
+    // extra : update the user in this function as its access token field is emtpy
+
+    const loggedInUser = await User.findById(user._id).select("-password  -refreshToken");
+
+    // generate cookies to send access and ref tokens
+    
+    // send a final response
+    
+    const options = {
+        httpOnly:true, //ab sirf database se changes kiye ja sakte h ya server side se
+        secure:true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken,options)
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new ApiResponse("200",{
+            user: loggedInUser,
+                  accessToken,
+                  refreshToken
+        }),
+        "User has logged in successfully"
+    );
+
+});
+
+
+export {
+    registerUser,
+    loginUser
+};
