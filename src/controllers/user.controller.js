@@ -144,7 +144,7 @@ const loginUser = asyncHandler(async(req,res)=>{
     
     // extra : update the user in this function as its access token field is emtpy
 
-    const loggedInUser = await User.findById(user._id).select("-password  -refreshToken");
+    const loggedInUser = await User.findById(user._id).select("-password  -refreshTokens");
 
     // generate cookies to send access and ref tokens
     
@@ -170,8 +170,39 @@ const loginUser = asyncHandler(async(req,res)=>{
 
 });
 
+const logoutUser = asyncHandler(async(req,res)=>{
+    // first making a new custom middleware which will help in authentication
+
+    // done
+
+    //update refresh token data of user in model
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                refreshTokens:undefined
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    const options = {
+        httpOnly:true, 
+        secure:true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
+    .json(new ApiResponse(200,{},"User has logged out successfully"));
+})
 
 export {
     registerUser,
-    loginUser
+    loginUser,
+    logoutUser
 };
