@@ -12,7 +12,7 @@ const generateAccessAndRefreshToken = async(userId)=>{
     try {
         const user = await User.findById(userId);
         const accessToken = user.generateAcessToken();
-        const refreshToken = user.generateRefreshToken();
+        const refreshToken = user.generateRefreshToken(); // dono m jwt token aayenge ,basically pura user data encyrpter form m aayega jo ki jwt algo lagake lambi string ban jati
 
         user.refreshTokens=refreshToken;
         await user.save( {validateBeforeSave:false} ); // does not need to check all fields because password was already valiadated while logging in
@@ -114,14 +114,19 @@ const registerUser=asyncHandler( async(req,res) =>
 const loginUser = asyncHandler(async(req,res)=>{
 
     // get info from req body
+   
     const {email,username,password}=req.body;
+   
     // validate the username or email
+   
     if(!username || !email)
     {
         throw new ApiError(400,"username or email is required");
     }
+   
     // check if user exists
-    const user = await User.findOne({
+   
+    const user = await User.findOne({ // yeh bool nhi h ,isme user model ki saari information rahegi uss user ki jisko find krre h
         $or:[{email},{username}] //mongo db operators
     })
  
@@ -129,9 +134,10 @@ const loginUser = asyncHandler(async(req,res)=>{
     {
         throw new ApiError(404,"User does not exist");
     }
+   
     // check password
 
-    const isPasswordValid = user.isPasswordCorrect(password);
+    const isPasswordValid = user.isPasswordCorrect(password); // boolean aayega
 
     if(!isPasswordValid)
     {
