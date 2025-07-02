@@ -4,14 +4,21 @@ import {User} from "../models/user.models.js";
 import {uploadOnCloudianry} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { application } from "express";
+import jwt from "jsonwebtoken"
 
 
 // creating seperate method for generating access and refresh token
 
+
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
         const user = await User.findById(userId);
-        const accessToken = user.generateAcessToken();
+        
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
+
+        const accessToken = user.generateAccessToken();
         const refreshToken = user.generateRefreshToken(); // dono m jwt token aayenge ,basically pura user data encyrpter form m aayega jo ki jwt algo lagake lambi string ban jati
 
         user.refreshTokens=refreshToken;
@@ -19,6 +26,7 @@ const generateAccessAndRefreshToken = async(userId)=>{
 
         return{accessToken,refreshToken};
     } catch (error) {
+        console.error("Token generation failed:", error.message);
         throw new ApiError(500,"Something went wrong while generating access and refresh token");
     }
 }
@@ -29,7 +37,7 @@ const registerUser=asyncHandler( async(req,res) =>
     //get user details (username,password,email,fullname)
     
     const {fullname,email,username,password}=req.body;
-    
+    console.log(req.files);
     //validation of all the fields if they filled correctly or not
 
     if([fullname,email,username,password].some((field)=>
@@ -119,7 +127,7 @@ const loginUser = asyncHandler(async(req,res)=>{
    
     // validate the username or email
    
-    if(!username || !email)
+    if(!username && !email)
     {
         throw new ApiError(400,"username or email is required");
     }
@@ -166,15 +174,16 @@ const loginUser = asyncHandler(async(req,res)=>{
     .cookie("accessToken",accessToken,options)
     .cookie("refreshToken",refreshToken,options)
     .json(
-        new ApiResponse("200",{
+        new ApiResponse(200,{
             user: loggedInUser,
                   accessToken,
                   refreshToken
-        }),
+        },
         "User has logged in successfully"
+        )
     );
-
 });
+
 
 const logoutUser = asyncHandler(async(req,res)=>{
     // first making a new custom middleware which will help in authentication
@@ -205,10 +214,63 @@ const logoutUser = asyncHandler(async(req,res)=>{
     .clearCookie("accessToken",options)
     .clearCookie("refreshToken",options)
     .json(new ApiResponse(200,{},"User has logged out successfully"));
-})
+});
+
+
+const AccessRefreshToken = asyncHandler(async(req,res)=>{
+    
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    if(!incomingRefreshToken)
+    {
+        throw new ApiError(401,"Unauthorized request");
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const user = await User.findById(decodedToken?._id);
+    
+        if(!user)
+        {
+            throw new ApiError(401,"Invalid refresh token")
+        }
+    
+        if(incomingRefreshToken !== user?.refreshTokens)
+        {
+            throw new ApiError(401,"Refresh token is expired or used")
+        }
+    
+        const options = {
+            httpOnly:true,
+            secure:true
+        }
+    
+        const {accessToken,newRefreshToken} = generateAccessAndRefreshToken(user._id);
+    
+        return res
+        .status(200)
+        .cookie("accessToken",accessToken,options)
+        .cookie("refreshToken",newRefreshToken,options)
+        .json(
+            new ApiResponse(200,
+                {
+                    accessToken , refreshToken:newRefreshToken
+                },"Access token refreshed") 
+        )
+    } catch (error) {
+        throw new ApiError(401,error?.message || "Invalid refresh token")
+    }
+
+});
+
 
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    AccessRefreshToken
 };
