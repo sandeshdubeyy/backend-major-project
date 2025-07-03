@@ -219,7 +219,7 @@ const logoutUser = asyncHandler(async(req,res)=>{
 
 const AccessRefreshToken = asyncHandler(async(req,res)=>{
     
-    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken; // yeh req se ref token le ayega
 
     if(!incomingRefreshToken)
     {
@@ -230,16 +230,16 @@ const AccessRefreshToken = asyncHandler(async(req,res)=>{
         const decodedToken = jwt.verify(
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
-        )
+        ) // isme .id aajayegi 
     
-        const user = await User.findById(decodedToken?._id);
+        const user = await User.findById(decodedToken?._id); // ab id aagyi h toh data base call marke user ka pura info nikal lo
     
         if(!user)
         {
             throw new ApiError(401,"Invalid refresh token")
         }
     
-        if(incomingRefreshToken !== user?.refreshTokens)
+        if(incomingRefreshToken !== user?.refreshTokens) // naye aaye hue refresh token ko compare krenge user wale se
         {
             throw new ApiError(401,"Refresh token is expired or used")
         }
@@ -249,7 +249,7 @@ const AccessRefreshToken = asyncHandler(async(req,res)=>{
             secure:true
         }
     
-        const {accessToken,newRefreshToken} = generateAccessAndRefreshToken(user._id);
+        const {accessToken,newRefreshToken} = generateAccessAndRefreshToken(user._id); // error na aye toh naye tokens geenrate krwake cookies m bhejdo
     
         return res
         .status(200)
